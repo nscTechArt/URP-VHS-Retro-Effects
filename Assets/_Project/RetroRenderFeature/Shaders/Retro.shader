@@ -17,6 +17,7 @@ Shader "Hidden/RetroBlur"
         HLSLINCLUDE
 
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
 
         struct Attributes
         {
@@ -264,7 +265,7 @@ Shader "Hidden/RetroBlur"
 
                 half3 smearColor = SAMPLE_TEXTURE2D(_SmearTexture, sampler_SmearTexture, input.uv).rgb;
                 sharpColor = lerp(sharpColor, smearColor, _SmearIntensity);
-
+                
                 sharpColor = RGBToYCbCr(sharpColor.rgb);
 
                 half3 blurredColor = SAMPLE_TEXTURE2D(_BlurredTexture, sampler_BlurredTexture, input.uv).rgb;

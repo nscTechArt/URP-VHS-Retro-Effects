@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
@@ -28,13 +29,6 @@ public class RetroRenderPass : ScriptableRenderPass
         // setup pass source and destination
         // ---------------------------------
         mSourceRT = renderingData.cameraData.renderer.cameraColorTargetHandle;
-        
-        // setup temporary color texture
-        // -----------------------------
-        mDescriptor = renderingData.cameraData.cameraTargetDescriptor;
-        mDescriptor.depthBufferBits = 0;
-        mDescriptor.msaaSamples = 1;
-        mDescriptor.colorFormat = RenderTextureFormat.Default;
     }
 
     public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
@@ -73,9 +67,7 @@ public class RetroRenderPass : ScriptableRenderPass
                 // ---------------------
                 width /= 2;
                 height /= 2;
-                mDescriptor.width = width;
-                mDescriptor.height = height;
-                cmd.GetTemporaryRT(mBlurPyramid[i], mDescriptor);
+                cmd.GetTemporaryRT(mBlurPyramid[i], width, height, 0, FilterMode.Bilinear);
 
                 if (i == 0)
                 {
@@ -107,10 +99,8 @@ public class RetroRenderPass : ScriptableRenderPass
             {
                 int smearWidth = Mathf.Min(640, Mathf.RoundToInt(screenWidth * 0.5f));
                 int smearHeight = Mathf.Min(480, Mathf.RoundToInt(screenHeight * 0.5f));
-                mDescriptor.width = smearWidth;
-                mDescriptor.height = smearHeight;
-                cmd.GetTemporaryRT(_SmearTexture0, mDescriptor);
-                cmd.GetTemporaryRT(_SmearTexture1, mDescriptor);
+                cmd.GetTemporaryRT(_SmearTexture0, smearWidth, smearHeight, 0, FilterMode.Bilinear);
+                cmd.GetTemporaryRT(_SmearTexture1, smearWidth, smearHeight, 0, FilterMode.Bilinear);
                 mPassMaterial.SetVector(_SmearTextureSize, new Vector4(1f / smearWidth, 1f / smearHeight, smearWidth, smearHeight));
                 mPassMaterial.SetVector(_SmearOffsetAttenuation, new Vector4(1, 0.3f));
                 cmd.Blit(mBlurPyramid[1], _SmearTexture0, mPassMaterial, 3);
@@ -146,7 +136,6 @@ public class RetroRenderPass : ScriptableRenderPass
     // render pass related
     // -------------------
     private RTHandle mSourceRT;
-    private RenderTextureDescriptor mDescriptor;
     // constants
     // ---------
     private int[] mBlurPyramid;

@@ -70,5 +70,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Active: 1
   m_Settings:
-    m_RenderPassEvent: 550
+    m_RenderPassEvent: 600
     m_RetroShader: {fileID: 4800000, guid: 48a91649f541bcb4abe6c7b9f3f1c985, type: 3}
