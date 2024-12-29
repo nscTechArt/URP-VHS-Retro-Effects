@@ -163,16 +163,16 @@ Shader "Hidden/RetroBlur"
             ENDHLSL
         }
 
-        Pass // Smearing
+        Pass // Smear 0
         {
-            Name "Smearing Pass"
+            Name "Smear Pass 0"
             
             HLSLPROGRAM
             #pragma vertex SmearVertex
             #pragma fragment SmearFragment
             
             float4 _SmearTextureSize;
-            float4 _SmearOffsetAttenuation;
+            float4 _SmearOffsetAttenuation0;
             
             struct Varyings
             {
@@ -196,9 +196,53 @@ Shader "Hidden/RetroBlur"
                 [unroll]
                 for (uint i = 1; i <= SMEAR_LENGTH; i++)
                 {
-                    float falloff = exp(-_SmearOffsetAttenuation.y * i);
+                    float falloff = exp(-_SmearOffsetAttenuation0.y * i);
                     energy += falloff;
-                    float u = input.uv.x - _SmearOffsetAttenuation.x * _SmearTextureSize.x * i;
+                    float u = input.uv.x - _SmearTextureSize.x * _SmearOffsetAttenuation0.x * i;
+                    color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float2(u, input.uv.y)) * falloff * (u > 0);
+                }
+                return color / energy;
+            }
+            
+            ENDHLSL
+        }
+
+        Pass // Smear 1
+        {
+            Name "Smear Pass 1"
+            
+            HLSLPROGRAM
+            #pragma vertex SmearVertex
+            #pragma fragment SmearFragment
+            
+            float4 _SmearTextureSize;
+            float4 _SmearOffsetAttenuation1;
+            
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv: TEXCOORD0;
+            };
+
+            Varyings SmearVertex(Attributes input)
+            {
+                Varyings output;
+                output.positionCS = TransformObjectToHClip(input.pos.xyz);
+                output.uv = input.uv;
+                return output;
+            }
+
+            half4 SmearFragment(Varyings input) : SV_Target
+            {
+                half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
+                float energy = 1;
+                const uint SMEAR_LENGTH = 4;
+                [unroll]
+                for (uint i = 1; i <= SMEAR_LENGTH; i++)
+                {
+                    float falloff = exp(-_SmearOffsetAttenuation1.y * i);
+                    energy += falloff;
+                    float u = input.uv.x - _SmearTextureSize.x * _SmearOffsetAttenuation1.x * i;
                     color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float2(u, input.uv.y)) * falloff * (u > 0);
                 }
                 return color / energy;
@@ -266,7 +310,7 @@ Shader "Hidden/RetroBlur"
                 half3 smearColor = SAMPLE_TEXTURE2D(_SmearTexture, sampler_SmearTexture, input.uv).rgb;
                 sharpColor = lerp(sharpColor, smearColor, _SmearIntensity);
                 
-                sharpColor = RGBToYCbCr(sharpColor.rgb);
+                sharpColor = RGBToYCbCr(sharpColor);
 
                 half3 blurredColor = SAMPLE_TEXTURE2D(_BlurredTexture, sampler_BlurredTexture, input.uv).rgb;
                 blurredColor = RGBToYCbCr(blurredColor);

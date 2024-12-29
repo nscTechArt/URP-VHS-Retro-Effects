@@ -21,7 +21,7 @@ public class RetroRenderPass : ScriptableRenderPass
         mPassMaterial.SetFloat(_BleedIntensity, mVolumeComponent.m_BleedIntensity.value);
         mPassMaterial.SetFloat(_SmearIntensity, mVolumeComponent.m_SmearIntensity.value);
         mPassMaterial.SetFloat(_EdgeIntensity, mVolumeComponent.m_EdgeIntensity.value);
-        mPassMaterial.SetFloat(_EdgeDistance, mVolumeComponent.m_EdgeDistance.value);
+        mPassMaterial.SetFloat(_EdgeDistance, -mVolumeComponent.m_EdgeDistance.value);
     }
 
     public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
@@ -43,77 +43,91 @@ public class RetroRenderPass : ScriptableRenderPass
             // --------------------
             int screenWidth = renderingData.cameraData.camera.pixelWidth;
             int screenHeight = renderingData.cameraData.camera.pixelHeight;
-            
-            // create blur pyramid
-            // -------------------
-            float blurAmount = Mathf.Clamp(Mathf.Log(screenWidth * mVolumeComponent.m_BleedRadius.value * 0.25f, 2f), 3, 8);
-            int blurIterations = Mathf.FloorToInt(blurAmount);
-            if (mBlurPyramid == null || mBlurPyramid.Length != blurIterations)
+
+            using (new ProfilingScope(cmd, new ProfilingSampler("Blur")))
             {
-                mBlurPyramid = new int[blurIterations];
+                // create blur pyramid
+                // -------------------
+                float blurAmount = Mathf.Clamp(Mathf.Log(screenWidth * mVolumeComponent.m_BleedRadius.value * 0.25f, 2f), 3, 8);
+                int blurIterations = Mathf.FloorToInt(blurAmount);
+                if (mBlurPyramid == null || mBlurPyramid.Length != blurIterations)
+                {
+                    mBlurPyramid = new int[blurIterations];
+                    for (int i = 0; i < blurIterations; i++)
+                    {
+                        mBlurPyramid[i] = PyramidID(i);
+                    }
+                }
+            
+                // blur downsample
+                // ---------------
+                int width = screenWidth;
+                int height = screenHeight;
                 for (int i = 0; i < blurIterations; i++)
                 {
-                    mBlurPyramid[i] = PyramidID(i);
-                }
-            }
-            
-            // blur downsample
-            // ---------------
-            int width = screenWidth;
-            int height = screenHeight;
-            for (int i = 0; i < blurIterations; i++)
-            {
-                // allocate temporary RT
-                // ---------------------
-                width /= 2;
-                height /= 2;
-                cmd.GetTemporaryRT(mBlurPyramid[i], width, height, 0, FilterMode.Bilinear);
+                    // allocate temporary RT
+                    // ---------------------
+                    width /= 2;
+                    height /= 2;
+                    cmd.GetTemporaryRT(mBlurPyramid[i], width, height, 0, FilterMode.Bilinear);
 
-                if (i == 0)
-                {
-                    cmd.Blit(mSourceRT.nameID, mBlurPyramid[0], mPassMaterial, 0);
+                    if (i == 0)
+                    {
+                        cmd.Blit(mSourceRT.nameID, mBlurPyramid[0], mPassMaterial, 0);
+                    }
+                    else
+                    {
+                        cmd.Blit(mBlurPyramid[i - 1], mBlurPyramid[i], mPassMaterial, 1);
+                    }
                 }
-                else
+            
+                // blur upsample
+                // -------------
+                for (int i = blurIterations - 1; i > 2; i--)
                 {
-                    cmd.Blit(mBlurPyramid[i - 1], mBlurPyramid[i], mPassMaterial, 1);
+                    float factor = 1;
+                    if (i == blurIterations - 1)
+                    {
+                        factor = blurAmount - blurIterations;
+                    }
+                    mPassMaterial.SetFloat(_UpsampleFactor, factor * 0.7f);
+                    cmd.Blit(mBlurPyramid[i], mBlurPyramid[i - 1], mPassMaterial, 2);
                 }
             }
             
-            // blur upsample
-            // -------------
-            for (int i = blurIterations - 1; i > 2; i--)
+            using (new ProfilingScope(cmd, new ProfilingSampler("Smear")))
             {
-                float factor = 1;
-                if (i == blurIterations - 1)
-                {
-                    factor = blurAmount - blurIterations;
-                }
-                mPassMaterial.SetFloat(_UpsampleFactor, factor * 0.7f);
-                cmd.Blit(mBlurPyramid[i], mBlurPyramid[i - 1], mPassMaterial, 2);
-            }
-            
-            // smearing
-            // --------
-            bool enableSmear = mVolumeComponent.m_SmearIntensity.value > 0;
-            if (enableSmear)
-            {
+                // smear
+                // -----
                 int smearWidth = Mathf.Min(640, Mathf.RoundToInt(screenWidth * 0.5f));
                 int smearHeight = Mathf.Min(480, Mathf.RoundToInt(screenHeight * 0.5f));
                 cmd.GetTemporaryRT(_SmearTexture0, smearWidth, smearHeight, 0, FilterMode.Bilinear);
                 cmd.GetTemporaryRT(_SmearTexture1, smearWidth, smearHeight, 0, FilterMode.Bilinear);
+                mPassMaterial.SetVector(_SmearOffsetAttenuation0, new Vector4(1, 0.3f));
                 mPassMaterial.SetVector(_SmearTextureSize, new Vector4(1f / smearWidth, 1f / smearHeight, smearWidth, smearHeight));
-                mPassMaterial.SetVector(_SmearOffsetAttenuation, new Vector4(1, 0.3f));
                 cmd.Blit(mBlurPyramid[1], _SmearTexture0, mPassMaterial, 3);
-                mPassMaterial.SetVector(_SmearOffsetAttenuation, new Vector4(5, 1.2f));
-                cmd.Blit(_SmearTexture0, _SmearTexture1, mPassMaterial, 3);
+                mPassMaterial.SetVector(_SmearOffsetAttenuation1, new Vector4(5, 1.2f));
+                cmd.Blit(_SmearTexture0, _SmearTexture1, mPassMaterial, 4);
+            }
+
+            using (new ProfilingScope(cmd, new ProfilingSampler("Composite")))
+            {
+                // composite
+                // ---------
+                cmd.SetGlobalTexture(_SlightBlurredTexture, mBlurPyramid[1]);
+                cmd.SetGlobalTexture(_BlurredTexture, mBlurPyramid[2]);
+                cmd.SetGlobalTexture(_SmearTexture, _SmearTexture1);
+                cmd.Blit(mBlurPyramid[0], mSourceRT.nameID, mPassMaterial, 5);
             }
             
-            // composite
-            // ---------
-            cmd.SetGlobalTexture(_SlightBlurredTexture, mBlurPyramid[1]);
-            cmd.SetGlobalTexture(_BlurredTexture, mBlurPyramid[2]);
-            cmd.SetGlobalTexture(_SmearTexture, _SmearTexture1);
-            cmd.Blit(mBlurPyramid[0], mSourceRT.nameID, mPassMaterial, 4);
+            // cleanup
+            // -------
+            foreach (int rt in mBlurPyramid)
+            {
+                cmd.ReleaseTemporaryRT(rt);
+            }
+            cmd.ReleaseTemporaryRT(_SmearTexture0);
+            cmd.ReleaseTemporaryRT(_SmearTexture1);
         }
         
         context.ExecuteCommandBuffer(cmd);
@@ -146,7 +160,8 @@ public class RetroRenderPass : ScriptableRenderPass
     private static readonly int _BlurBias = Shader.PropertyToID("_BlurBias");
     private static readonly int _UpsampleFactor = Shader.PropertyToID("_UpsampleFactor");
     private static readonly int _SmearTextureSize = Shader.PropertyToID("_SmearTextureSize");
-    private static readonly int _SmearOffsetAttenuation = Shader.PropertyToID("_SmearOffsetAttenuation");
+    private static readonly int _SmearOffsetAttenuation0 = Shader.PropertyToID("_SmearOffsetAttenuation0");
+    private static readonly int _SmearOffsetAttenuation1 = Shader.PropertyToID("_SmearOffsetAttenuation1");
     private static readonly int _BleedIntensity = Shader.PropertyToID("_BleedIntensity");
     private static readonly int _SmearIntensity = Shader.PropertyToID("_SmearIntensity");
     private static readonly int _EdgeIntensity = Shader.PropertyToID("_EdgeIntensity");
