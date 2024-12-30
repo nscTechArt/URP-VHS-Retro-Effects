@@ -201,7 +201,7 @@ Shader "Hidden/RetroBlur"
                     0.5 + 0.43921 * rgb.r - 0.3678 * rgb.g - 0.07142 * rgb.b);
             }
             
-            half3 YCbCrToRGB(float3 ycbcr)
+            half3 YCbCrToRGB(half3 ycbcr)
             {
                 ycbcr -= half3(0.0625, 0.5, 0.5);
                 return half3(1.164 * ycbcr.x + 1.596 * ycbcr.z,
@@ -228,7 +228,7 @@ Shader "Hidden/RetroBlur"
                 half3 blurredColor = SAMPLE_TEXTURE2D(_BlurredTexture, sampler_BlurredTexture, input.uv).rgb;
                 blurredColor = RGBToYCbCr(blurredColor);
 
-                sharpColor.gb = lerp(sharpColor.gb, blurredColor.gb, _BleedIntensity);
+                sharpColor.rgb = lerp(sharpColor.rgb, blurredColor.rgb, _BleedIntensity);
                 sharpColor = YCbCrToRGB(sharpColor);
                 
                 return half4(sharpColor, 1);
