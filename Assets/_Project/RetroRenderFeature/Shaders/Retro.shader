@@ -213,22 +213,25 @@ Shader "Hidden/RetroBlur"
             {
                 float2 quarterTexelSize = _MainTex_TexelSize.xy * 0.25;
                 half3 sharpColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + quarterTexelSize).rgb;
+                
+                // smearing
+                // --------
+                half3 smearColor = SAMPLE_TEXTURE2D(_SmearTexture, sampler_SmearTexture, input.uv).rgb;
+                sharpColor = lerp(sharpColor, smearColor, _SmearIntensity);
 
+                // edge sharpening
+                // ---------------
                 float2 slightBlurredUV = input.uv - float2(_EdgeDistance, 0);
                 half3 slightBlurredColor = SAMPLE_TEXTURE2D(_SlightBlurredTexture, sampler_SlightBlurredTexture, slightBlurredUV).rgb;
-
                 half3 edge = sharpColor - slightBlurredColor;
                 sharpColor += edge * _EdgeIntensity;
 
-                half3 smearColor = SAMPLE_TEXTURE2D(_SmearTexture, sampler_SmearTexture, input.uv).rgb;
-                sharpColor = lerp(sharpColor, smearColor, _SmearIntensity);
-                
+                // color bleeding
+                // --------------
                 sharpColor = RGBToYCbCr(sharpColor);
-
                 half3 blurredColor = SAMPLE_TEXTURE2D(_BlurredTexture, sampler_BlurredTexture, input.uv).rgb;
                 blurredColor = RGBToYCbCr(blurredColor);
-
-                sharpColor.rgb = lerp(sharpColor.rgb, blurredColor.rgb, _BleedIntensity);
+                sharpColor.gb = lerp(sharpColor.gb, blurredColor.gb, _BleedIntensity);
                 sharpColor = YCbCrToRGB(sharpColor);
                 
                 return half4(sharpColor, 1);
