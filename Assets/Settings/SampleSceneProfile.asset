@@ -114,34 +114,34 @@ MonoBehaviour:
     m_Value: 1.23
   m_SmearIntensity:
     m_OverrideState: 1
-    m_Value: 0.667
+    m_Value: 0.609
   m_EdgeIntensity:
     m_OverrideState: 1
-    m_Value: 0.925
+    m_Value: 2
   m_EdgeDistance:
     m_OverrideState: 1
-    m_Value: 0.003
+    m_Value: 0.00456
   m_TapeNoiseAmount:
     m_OverrideState: 1
-    m_Value: 0.696
+    m_Value: 0.515
   m_TapeNoiseSpeed:
     m_OverrideState: 1
-    m_Value: 0.65
+    m_Value: 0.877
   m_TapeNoiseAlpha:
     m_OverrideState: 1
-    m_Value: 0.078
+    m_Value: 0.148
   m_InterlacingAmount:
     m_OverrideState: 1
     m_Value: 2.82
   m_ScanlineSpeed:
     m_OverrideState: 1
-    m_Value: 0.386
+    m_Value: 0.057
   m_ScanlineFrequency:
     m_OverrideState: 1
-    m_Value: 44.6
+    m_Value: 28
   m_ScanlineIntensity:
     m_OverrideState: 1
-    m_Value: 0.165
+    m_Value: 0.141
 --- !u!114 &-550209641725945784
 MonoBehaviour:
   m_ObjectHideFlags: 3
