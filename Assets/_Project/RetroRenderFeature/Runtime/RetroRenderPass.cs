@@ -22,6 +22,13 @@ public class RetroRenderPass : ScriptableRenderPass
         mPassMaterial.SetFloat(_SmearIntensity, mVolumeComponent.m_SmearIntensity.value);
         mPassMaterial.SetFloat(_EdgeIntensity, mVolumeComponent.m_EdgeIntensity.value);
         mPassMaterial.SetFloat(_EdgeDistance, -mVolumeComponent.m_EdgeDistance.value);
+        mPassMaterial.SetFloat("_TapeNoiseAmount", volumeComponent.m_TapeNoiseAmount.value);
+        mPassMaterial.SetFloat("_TapeNoiseSpeed", volumeComponent.m_TapeNoiseSpeed.value);
+        mPassMaterial.SetFloat("_TapeNoiseAlpha", volumeComponent.m_TapeNoiseAlpha.value);
+        mPassMaterial.SetFloat("_InterlacingAmount", volumeComponent.m_InterlacingAmount.value);
+        mPassMaterial.SetFloat("_ScanlineSpeed", volumeComponent.m_ScanlineSpeed.value);
+        mPassMaterial.SetFloat("_ScanlineFrequency", volumeComponent.m_ScanlineFrequency.value);
+        mPassMaterial.SetFloat("_ScanlineIntensity", volumeComponent.m_ScanlineIntensity.value);
     }
 
     public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)

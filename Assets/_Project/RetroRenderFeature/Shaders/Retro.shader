@@ -192,6 +192,14 @@ Shader "Hidden/RetroBlur"
             float _SmearIntensity;
             float _EdgeIntensity;
             float _EdgeDistance;
+            float _TapeNoiseAmount;
+            float _TapeNoiseSpeed;
+            float _TapeNoiseAlpha;
+            float _InterlacingAmount;
+            float _BleedAmount;
+            float _ScanlineSpeed;
+            float _ScanlineFrequency;
+            float _ScanlineIntensity;
             
 
             half3 RGBToYCbCr(half3 rgb)
@@ -209,32 +217,124 @@ Shader "Hidden/RetroBlur"
                     1.164 * ycbcr.x + 2.017 * ycbcr.y);
             }
 
+            float Rand (in float2 st)
+            {
+                return frac(sin(dot(st.xy, float2(12.9898,78.233)))*43758.5453123);
+            }
+
+            half Hash(half n)
+            {
+                return frac( sin(n) * 43758.5453123);
+            }
+
+            half Hash12(half2 p)
+            {
+                half3 p3  = frac(p.xyx * half3(443.8975,397.2973, 491.1871));
+                p3 += dot(p3, p3.yzx + 19.19);
+                return frac(p3.x * p3.z * p3.y);
+            }
+            
+            half NoiseFromIQ(half3 x)
+            {
+               half3 p = floor(x);
+               half3 f = frac(x);
+               f = f * f * (3.0 - 2.0 * f);
+               half n = p.x + p.y * 57.0 + 113.0 * p.z;
+               return lerp(lerp(lerp(Hash(n +   0.), Hash(n +   1.), f.x),
+                                lerp(Hash(n +  57.), Hash(n +  57.), f.x), f.y),
+                           lerp(lerp(Hash(n + 113.), Hash(n + 114.), f.x),
+                                lerp(Hash(n + 170.), Hash(n + 171.), f.x), f.y), f.z);
+            }
+            
+            half TapeNoise(half2 uv)
+            {
+                half t = _Time.y * _TapeNoiseSpeed;
+                
+                // generate line noises
+                // --------------------
+                uv.y = 1 - uv.y;
+                half y = uv.y * _ScreenParams.y;
+                half lineNoise = NoiseFromIQ( half3(y * 0.012 +   0 + t, 1, 1) ) *
+                                 NoiseFromIQ( half3(y * 0.091 + 200 + t, 1, 1) ) *
+                                 NoiseFromIQ( half3(y * 0.917 + 421 + t, 1, 1) );
+
+                // generate noise mask
+                // -------------------
+                half noiseMask =  Hash12(frac(uv + t * half2(0.234, 0.637)));
+                noiseMask = noiseMask * noiseMask * noiseMask + 0.3;
+
+                // generate tape noise
+                // -------------------
+                half tapeNoise = lineNoise * noiseMask;
+
+                // saturate tape noise
+                // -------------------
+                tapeNoise = step(1 - _TapeNoiseAmount, tapeNoise);
+                
+                return tapeNoise * _TapeNoiseAlpha;
+            }
+
+            half InterlacingOffset(half2 uv)
+            {
+                half offset = uv.y + _Time.y;
+                offset *= _ScreenParams.y;
+                offset = floor(offset);
+                offset = fmod(offset, 2.75);
+                offset *= _InterlacingAmount;
+                offset *= rcp(_ScreenParams.x);
+                return offset;
+            }
+
+            half Scanlines(half2 uv)
+            {
+                half scroll = _Time.y * _ScanlineSpeed;
+                return sin((uv.y + scroll) * _ScanlineFrequency * 2.0 * 3.1416);
+            }
+
             half4 CompositeFragment(Varyings input) : SV_Target
             {
-                float2 quarterTexelSize = _MainTex_TexelSize.xy * 0.25;
-                half3 sharpColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + quarterTexelSize).rgb;
+                // vertical wrapping
+                // -----------------
+                float2 uv = input.uv;
+                uv.y = frac(uv.y + lerp(0.0, 0.3, frac(_Time.z * 3.0) * step(0.97, Rand(floor(_Time.z * 3.0)))));
+
+                // interlacing
+                // -----------
+                uv.x += InterlacingOffset(uv);
+                
+                // scene color
+                // -----------
+                half3 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv).rgb;
+                
+                // edge sharpening
+                // ---------------
+                float2 slightBlurredUV = uv - float2(_EdgeDistance, 0);
+                half3 slightBlurredColor = SAMPLE_TEXTURE2D(_SlightBlurredTexture, sampler_SlightBlurredTexture, slightBlurredUV).rgb;
+                half3 edge = color - slightBlurredColor;
+                color += edge * _EdgeIntensity;
                 
                 // smearing
                 // --------
-                half3 smearColor = SAMPLE_TEXTURE2D(_SmearTexture, sampler_SmearTexture, input.uv).rgb;
-                sharpColor = lerp(sharpColor, smearColor, _SmearIntensity);
-
-                // edge sharpening
-                // ---------------
-                float2 slightBlurredUV = input.uv - float2(_EdgeDistance, 0);
-                half3 slightBlurredColor = SAMPLE_TEXTURE2D(_SlightBlurredTexture, sampler_SlightBlurredTexture, slightBlurredUV).rgb;
-                half3 edge = sharpColor - slightBlurredColor;
-                sharpColor += edge * _EdgeIntensity;
-
+                half3 smearColor = SAMPLE_TEXTURE2D(_SmearTexture, sampler_SmearTexture, uv).rgb;
+                color = lerp(color, smearColor, _SmearIntensity);
+                
                 // color bleeding
                 // --------------
-                sharpColor = RGBToYCbCr(sharpColor);
-                half3 blurredColor = SAMPLE_TEXTURE2D(_BlurredTexture, sampler_BlurredTexture, input.uv).rgb;
+                color = RGBToYCbCr(color);
+                half3 blurredColor = SAMPLE_TEXTURE2D(_BlurredTexture, sampler_BlurredTexture, uv).rgb;
                 blurredColor = RGBToYCbCr(blurredColor);
-                sharpColor.gb = lerp(sharpColor.gb, blurredColor.gb, _BleedIntensity);
-                sharpColor = YCbCrToRGB(sharpColor);
-                
-                return half4(sharpColor, 1);
+                color.gb = lerp(color.gb, blurredColor.gb, _BleedIntensity);
+                color = YCbCrToRGB(color);
+
+                // tape noises
+                // -----------
+                color += TapeNoise(uv);
+
+                // scanlines
+                // ---------
+                color = lerp(color, color * Scanlines(uv), _ScanlineIntensity);
+     
+                return half4(color, 1);
             }
             
             ENDHLSL
