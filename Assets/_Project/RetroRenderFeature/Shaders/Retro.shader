@@ -18,72 +18,39 @@ Shader "Hidden/RetroBlur"
 
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-
-        struct Attributes
-        {
-            float4 pos: POSITION;
-	        float2 uv: TEXCOORD0;
-        };
-        
-        TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
         
         CBUFFER_START(UnityPerMaterial)
         float4 _MainTex_ST;
         float4 _MainTex_TexelSize; 
         CBUFFER_END
+
+        TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
+        
+        struct Attributes
+        {
+            float4 pos: POSITION;
+	        float2 uv: TEXCOORD0;
+        };
+
+        struct Varyings
+        {
+            float4 positionCS : SV_POSITION;
+            float2 uv: TEXCOORD0;
+        };
+
+        Varyings Vertex(Attributes input)
+        {
+            Varyings output;
+            output.positionCS = TransformObjectToHClip(input.pos.xyz);
+            output.uv = input.uv;
+            return output;
+        }
         
         ENDHLSL
         
-        Pass // Blur Downsample
+        Pass // Blur DownSample
         {
-            Name "Blur Downsample Pass"
-            
-            HLSLPROGRAM
-            #pragma vertex BlurDownSampleVertex
-            #pragma fragment BlurDownSampleFragment
-            
-            struct Varyings
-            {
-                float4 positionCS : SV_POSITION;
-                float2 uvs[4]     : TEXCOORD0; 
-            };
-
-            Varyings BlurDownSampleVertex(Attributes input)
-            {
-                Varyings output;
-
-                // position
-                // --------
-                output.positionCS = TransformObjectToHClip(input.pos.xyz);
-
-                // uvs with offsets
-                // ----------------
-                float2 uv = input.uv;
-                float2 texelSize = _MainTex_TexelSize.xy;
-                output.uvs[0] = uv + texelSize * 0.5;
-                output.uvs[1] = uv + float2(0, texelSize.y) - texelSize * 0.5;
-                output.uvs[2] = uv + float2(texelSize.x, 0) - texelSize * 0.5;
-                output.uvs[3] = uv - texelSize * 0.5;
-                
-                return output;
-            }
-
-            half4 BlurDownSampleFragment(Varyings input) : SV_Target
-            {
-                half4 color = 0;
-                color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uvs[0]) * 0.25;
-                color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uvs[1]) * 0.25;
-                color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uvs[2]) * 0.25;
-                color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uvs[3]) * 0.25;
-                return color;
-            }
-            
-            ENDHLSL
-        }
-
-        Pass // Blur
-        {
-            Name "Blur Pass"
+            Name "Blur DownSample Pass"
             
             HLSLPROGRAM
             #pragma vertex BlurVertex
@@ -91,30 +58,29 @@ Shader "Hidden/RetroBlur"
 
             float _BlurBias;
             
-            struct Varyings
+            struct CustomVaryings
             {
                 float4 positionCS : SV_POSITION;
                 float2 uvs[4]     : TEXCOORD0; 
             };
 
-            Varyings BlurVertex(Attributes input)
+            CustomVaryings BlurVertex(Attributes input)
             {
-                Varyings output;
+                CustomVaryings output;
                 output.positionCS = TransformObjectToHClip(input.pos.xyz);
                 
                 float left = -1 - _BlurBias;
                 float right = 1 - _BlurBias;
-                float2 blur = _MainTex_TexelSize.xy * float2(1, 0.5);
-                float2 uv = input.uv;
-                output.uvs[0] = uv + float2(blur.x * left,  -blur.y);
-                output.uvs[1] = uv + float2(blur.x * right, -blur.y);
-                output.uvs[2] = uv + float2(blur.x * left,   blur.y);
-                output.uvs[3] = uv + float2(blur.x * right,  blur.y);
+                float2 blurOffset = _MainTex_TexelSize.xy * float2(1, 0.5);
+                output.uvs[0] = input.uv + float2(blurOffset.x * left,  -blurOffset.y);
+                output.uvs[1] = input.uv + float2(blurOffset.x * right, -blurOffset.y);
+                output.uvs[2] = input.uv + float2(blurOffset.x * left,   blurOffset.y);
+                output.uvs[3] = input.uv + float2(blurOffset.x * right,  blurOffset.y);
                 
                 return output;
             }
 
-            half4 BlurFragment(Varyings input) : SV_Target
+            half4 BlurFragment(CustomVaryings input) : SV_Target
             {
                 half4 color = 0;
                 color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uvs[0]) * 0.25;
@@ -127,33 +93,19 @@ Shader "Hidden/RetroBlur"
             ENDHLSL
         }
 
-        Pass // Blur Upsample
+        Pass // Blur UpSample
         {
-            Name "Blur Upsample Pass"
+            Name "Blur UpSample Pass"
             
             Blend SrcAlpha OneMinusSrcAlpha
             
             HLSLPROGRAM
-            #pragma vertex BlurVertex
-            #pragma fragment BlurUpsampleFragment
+            #pragma vertex Vertex
+            #pragma fragment BlurUpSampleFragment
 
             float _UpsampleFactor;
             
-            struct Varyings
-            {
-                float4 positionCS : SV_POSITION;
-                float2 uv: TEXCOORD0;
-            };
-
-            Varyings BlurVertex(Attributes input)
-            {
-                Varyings output;
-                output.positionCS = TransformObjectToHClip(input.pos.xyz);
-                output.uv = input.uv;
-                return output;
-            }
-
-            half4 BlurUpsampleFragment(Varyings input) : SV_Target
+            half4 BlurUpSampleFragment(Varyings input) : SV_Target
             {
                 half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 color.a = _UpsampleFactor;
@@ -168,26 +120,12 @@ Shader "Hidden/RetroBlur"
             Name "Smear Pass 0"
             
             HLSLPROGRAM
-            #pragma vertex SmearVertex
+            #pragma vertex Vertex
             #pragma fragment SmearFragment
             
             float4 _SmearTextureSize;
             float4 _SmearOffsetAttenuation0;
             
-            struct Varyings
-            {
-                float4 positionCS : SV_POSITION;
-                float2 uv: TEXCOORD0;
-            };
-
-            Varyings SmearVertex(Attributes input)
-            {
-                Varyings output;
-                output.positionCS = TransformObjectToHClip(input.pos.xyz);
-                output.uv = input.uv;
-                return output;
-            }
-
             half4 SmearFragment(Varyings input) : SV_Target
             {
                 half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
@@ -212,26 +150,12 @@ Shader "Hidden/RetroBlur"
             Name "Smear Pass 1"
             
             HLSLPROGRAM
-            #pragma vertex SmearVertex
+            #pragma vertex Vertex
             #pragma fragment SmearFragment
             
             float4 _SmearTextureSize;
             float4 _SmearOffsetAttenuation1;
             
-            struct Varyings
-            {
-                float4 positionCS : SV_POSITION;
-                float2 uv: TEXCOORD0;
-            };
-
-            Varyings SmearVertex(Attributes input)
-            {
-                Varyings output;
-                output.positionCS = TransformObjectToHClip(input.pos.xyz);
-                output.uv = input.uv;
-                return output;
-            }
-
             half4 SmearFragment(Varyings input) : SV_Target
             {
                 half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
@@ -256,7 +180,7 @@ Shader "Hidden/RetroBlur"
             Name "Composite Pass"
             
             HLSLPROGRAM
-            #pragma vertex CompositeVertex
+            #pragma vertex Vertex
             #pragma fragment CompositeFragment
 
             TEXTURE2D(_SlightBlurredTexture); SAMPLER(sampler_SlightBlurredTexture);
@@ -267,19 +191,6 @@ Shader "Hidden/RetroBlur"
             float _EdgeIntensity;
             float _EdgeDistance;
             
-            struct Varyings
-            {
-                float4 positionCS : SV_POSITION;
-                float2 uv: TEXCOORD0;
-            };
-
-            Varyings CompositeVertex(Attributes input)
-            {
-                Varyings output;
-                output.positionCS = TransformObjectToHClip(input.pos.xyz);
-                output.uv = input.uv;
-                return output;
-            }
 
             half3 RGBToYCbCr(half3 rgb)
             {

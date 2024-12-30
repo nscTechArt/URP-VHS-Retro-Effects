@@ -9,7 +9,7 @@ public class Retro : VolumeComponent, IPostProcessComponent
 
     public ClampedFloatParameter m_BleedRadius = new(0, 0, 1);
     public ClampedFloatParameter m_BleedDirection = new(0, -1, 1);
-    public ClampedFloatParameter m_BleedIntensity = new(0, 0, 1);
+    public ClampedFloatParameter m_BleedIntensity = new(0, 0, 2);
     
     public ClampedFloatParameter m_SmearIntensity = new(0, 0, 1);
 

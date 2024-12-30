@@ -49,7 +49,7 @@ public class RetroRenderPass : ScriptableRenderPass
                 // create blur pyramid
                 // -------------------
                 float blurAmount = Mathf.Clamp(Mathf.Log(screenWidth * mVolumeComponent.m_BleedRadius.value * 0.25f, 2f), 3, 8);
-                int blurIterations = Mathf.FloorToInt(blurAmount);
+                int   blurIterations = Mathf.FloorToInt(blurAmount);
                 if (mBlurPyramid == null || mBlurPyramid.Length != blurIterations)
                 {
                     mBlurPyramid = new int[blurIterations];
@@ -59,7 +59,7 @@ public class RetroRenderPass : ScriptableRenderPass
                     }
                 }
             
-                // blur downsample
+                // downsample blur
                 // ---------------
                 int width = screenWidth;
                 int height = screenHeight;
@@ -77,11 +77,11 @@ public class RetroRenderPass : ScriptableRenderPass
                     }
                     else
                     {
-                        cmd.Blit(mBlurPyramid[i - 1], mBlurPyramid[i], mPassMaterial, 1);
+                        cmd.Blit(mBlurPyramid[i - 1], mBlurPyramid[i], mPassMaterial, 0);
                     }
                 }
             
-                // blur upsample
+                // upsample blur
                 // -------------
                 for (int i = blurIterations - 1; i > 2; i--)
                 {
@@ -91,7 +91,7 @@ public class RetroRenderPass : ScriptableRenderPass
                         factor = blurAmount - blurIterations;
                     }
                     mPassMaterial.SetFloat(_UpsampleFactor, factor * 0.7f);
-                    cmd.Blit(mBlurPyramid[i], mBlurPyramid[i - 1], mPassMaterial, 2);
+                    cmd.Blit(mBlurPyramid[i], mBlurPyramid[i - 1], mPassMaterial, 1);
                 }
             }
             
@@ -105,9 +105,9 @@ public class RetroRenderPass : ScriptableRenderPass
                 cmd.GetTemporaryRT(_SmearTexture1, smearWidth, smearHeight, 0, FilterMode.Bilinear);
                 mPassMaterial.SetVector(_SmearOffsetAttenuation0, new Vector4(1, 0.3f));
                 mPassMaterial.SetVector(_SmearTextureSize, new Vector4(1f / smearWidth, 1f / smearHeight, smearWidth, smearHeight));
-                cmd.Blit(mBlurPyramid[1], _SmearTexture0, mPassMaterial, 3);
+                cmd.Blit(mBlurPyramid[1], _SmearTexture0, mPassMaterial, 2);
                 mPassMaterial.SetVector(_SmearOffsetAttenuation1, new Vector4(5, 1.2f));
-                cmd.Blit(_SmearTexture0, _SmearTexture1, mPassMaterial, 4);
+                cmd.Blit(_SmearTexture0, _SmearTexture1, mPassMaterial, 3);
             }
 
             using (new ProfilingScope(cmd, new ProfilingSampler("Composite")))
@@ -117,7 +117,7 @@ public class RetroRenderPass : ScriptableRenderPass
                 cmd.SetGlobalTexture(_SlightBlurredTexture, mBlurPyramid[1]);
                 cmd.SetGlobalTexture(_BlurredTexture, mBlurPyramid[2]);
                 cmd.SetGlobalTexture(_SmearTexture, _SmearTexture1);
-                cmd.Blit(mBlurPyramid[0], mSourceRT.nameID, mPassMaterial, 5);
+                cmd.Blit(mBlurPyramid[0], mSourceRT.nameID, mPassMaterial, 4);
             }
             
             // cleanup

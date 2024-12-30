@@ -24,13 +24,13 @@ MonoBehaviour:
     m_Value: 1
   m_BleedIntensity:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 1.457
   m_SmearIntensity:
     m_OverrideState: 0
-    m_Value: 0.693
+    m_Value: 1
   m_EdgeIntensity:
     m_OverrideState: 0
-    m_Value: 2
+    m_Value: 1.81
   m_EdgeDistance:
     m_OverrideState: 0
     m_Value: 0.00416
