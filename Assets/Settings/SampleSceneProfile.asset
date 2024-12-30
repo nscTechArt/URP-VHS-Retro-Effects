@@ -17,23 +17,23 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: 1
   m_BleedRadius:
-    m_OverrideState: 1
+    m_OverrideState: 0
     m_Value: 1
   m_BleedDirection:
-    m_OverrideState: 1
+    m_OverrideState: 0
     m_Value: 1
   m_BleedIntensity:
-    m_OverrideState: 1
+    m_OverrideState: 0
     m_Value: 1.457
   m_SmearIntensity:
     m_OverrideState: 0
     m_Value: 1
   m_EdgeIntensity:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1.81
   m_EdgeDistance:
-    m_OverrideState: 0
-    m_Value: 0.00416
+    m_OverrideState: 1
+    m_Value: 0.00355
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

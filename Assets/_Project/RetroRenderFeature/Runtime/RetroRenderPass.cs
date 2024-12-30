@@ -103,10 +103,8 @@ public class RetroRenderPass : ScriptableRenderPass
                 int smearHeight = Mathf.Min(480, Mathf.RoundToInt(screenHeight * 0.5f));
                 cmd.GetTemporaryRT(_SmearTexture0, smearWidth, smearHeight, 0, FilterMode.Bilinear);
                 cmd.GetTemporaryRT(_SmearTexture1, smearWidth, smearHeight, 0, FilterMode.Bilinear);
-                mPassMaterial.SetVector(_SmearOffsetAttenuation0, new Vector4(1, 0.3f));
-                mPassMaterial.SetVector(_SmearTextureSize, new Vector4(1f / smearWidth, 1f / smearHeight, smearWidth, smearHeight));
+                mPassMaterial.SetFloat(_SmearTextureTexelSize, 1f / smearWidth);
                 cmd.Blit(mBlurPyramid[1], _SmearTexture0, mPassMaterial, 2);
-                mPassMaterial.SetVector(_SmearOffsetAttenuation1, new Vector4(5, 1.2f));
                 cmd.Blit(_SmearTexture0, _SmearTexture1, mPassMaterial, 3);
             }
 
@@ -159,9 +157,7 @@ public class RetroRenderPass : ScriptableRenderPass
     
     private static readonly int _BlurBias = Shader.PropertyToID("_BlurBias");
     private static readonly int _UpsampleFactor = Shader.PropertyToID("_UpsampleFactor");
-    private static readonly int _SmearTextureSize = Shader.PropertyToID("_SmearTextureSize");
-    private static readonly int _SmearOffsetAttenuation0 = Shader.PropertyToID("_SmearOffsetAttenuation0");
-    private static readonly int _SmearOffsetAttenuation1 = Shader.PropertyToID("_SmearOffsetAttenuation1");
+    private static readonly int _SmearTextureTexelSize = Shader.PropertyToID("_SmearTextureTexelSize");
     private static readonly int _BleedIntensity = Shader.PropertyToID("_BleedIntensity");
     private static readonly int _SmearIntensity = Shader.PropertyToID("_SmearIntensity");
     private static readonly int _EdgeIntensity = Shader.PropertyToID("_EdgeIntensity");

@@ -123,8 +123,9 @@ Shader "Hidden/RetroBlur"
             #pragma vertex Vertex
             #pragma fragment SmearFragment
             
-            float4 _SmearTextureSize;
-            float4 _SmearOffsetAttenuation0;
+            float _SmearTextureTexelSize;
+            #define _Falloff 0.3
+            #define _Offset 1.0
             
             half4 SmearFragment(Varyings input) : SV_Target
             {
@@ -134,10 +135,10 @@ Shader "Hidden/RetroBlur"
                 [unroll]
                 for (uint i = 1; i <= SMEAR_LENGTH; i++)
                 {
-                    float falloff = exp(-_SmearOffsetAttenuation0.y * i);
+                    float falloff = exp(-_Falloff * i);
                     energy += falloff;
-                    float u = input.uv.x - _SmearTextureSize.x * _SmearOffsetAttenuation0.x * i;
-                    color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float2(u, input.uv.y)) * falloff * (u > 0);
+                    float u = input.uv.x - _SmearTextureTexelSize * _Offset * i;
+                    color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float2(u, input.uv.y)) * falloff;
                 }
                 return color / energy;
             }
@@ -153,8 +154,9 @@ Shader "Hidden/RetroBlur"
             #pragma vertex Vertex
             #pragma fragment SmearFragment
             
-            float4 _SmearTextureSize;
-            float4 _SmearOffsetAttenuation1;
+            float _SmearTextureTexelSize;
+            #define _Falloff 1.2
+            #define _Offset 5.0
             
             half4 SmearFragment(Varyings input) : SV_Target
             {
@@ -164,10 +166,10 @@ Shader "Hidden/RetroBlur"
                 [unroll]
                 for (uint i = 1; i <= SMEAR_LENGTH; i++)
                 {
-                    float falloff = exp(-_SmearOffsetAttenuation1.y * i);
+                    float falloff = exp(-_Falloff * i);
                     energy += falloff;
-                    float u = input.uv.x - _SmearTextureSize.x * _SmearOffsetAttenuation1.x * i;
-                    color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float2(u, input.uv.y)) * falloff * (u > 0);
+                    float u = input.uv.x - _SmearTextureTexelSize * _Offset * i;
+                    color += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float2(u, input.uv.y)) * falloff;
                 }
                 return color / energy;
             }
