@@ -1,8 +1,24 @@
 # URP-VHS-Retro-Effects
 
+> Based On Unity 2022.3
+
+## Features
+
+- Color Bleed
+- Smear
+- Edge Sharpening
+- Tape Noises
+- Interlacing
+- Scanlines
+- Film Grain
+
+Please visit [URP中实现 VHS Retro Effect | My Blogs](https://loveforyou.tech/posts/urp-retro-effect/) to get more details
+
+
+
 实现的过程中遇到了一些坑
 
-- 使用到了dual blur，用int数组，也就是`RenderTextureIdentifier`的形式来保存dual blur中的多个临时纹理。如果使用Blitter.BlitterTexture将cameraColor拷贝到第一个`RenderTextureIdentifier`，源纹理出现了货不对版的情况，在FrameDebugg中查看，源纹理变成了深度纹理，或SSAO中的纹理，很奇怪。使用`cmd.Blit`就没有问题
+- 使用到了dual blur，用int数组，也就是`RenderTextureIdentifier`的形式来保存dual blur中的多个临时纹理。如果使用`Blitter.BlitterTexture`将`cameraColor`拷贝到第一个`RenderTextureIdentifier`，源纹理出现了货不对版的情况，在FrameDebugg中查看，源纹理变成了深度纹理，或SSAO中的纹理，很奇怪。使用`cmd.Blit`就没有问题
 
 - dual blur过程中所使用的临时纹理，貌似需要使用`R8G8B8A8_SRGB`的格式
 
