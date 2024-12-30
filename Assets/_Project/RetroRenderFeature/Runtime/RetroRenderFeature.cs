@@ -18,12 +18,13 @@ public class RetroRenderFeature : ScriptableRendererFeature
     
     public override void Create()
     {
-        if (m_Settings.m_RetroShader != null)
-            mPass = new RetroRenderPass(name, m_Settings);
+        if (m_Settings.m_RetroShader == null) return;
+        mPass = new RetroRenderPass(name, m_Settings);
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
+        if (m_Settings.m_RetroShader == null) return;
         Retro volumeComponent = VolumeManager.instance.stack.GetComponent<Retro>();
         if (!volumeComponent || !volumeComponent.IsActive()) return;
         if (renderingData.cameraData.cameraType != CameraType.Game) return;

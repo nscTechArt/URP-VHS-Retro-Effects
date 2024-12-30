@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
@@ -22,13 +21,13 @@ public class RetroRenderPass : ScriptableRenderPass
         mPassMaterial.SetFloat(_SmearIntensity, mVolumeComponent.m_SmearIntensity.value);
         mPassMaterial.SetFloat(_EdgeIntensity, mVolumeComponent.m_EdgeIntensity.value);
         mPassMaterial.SetFloat(_EdgeDistance, -mVolumeComponent.m_EdgeDistance.value);
-        mPassMaterial.SetFloat("_TapeNoiseAmount", volumeComponent.m_TapeNoiseAmount.value);
-        mPassMaterial.SetFloat("_TapeNoiseSpeed", volumeComponent.m_TapeNoiseSpeed.value);
-        mPassMaterial.SetFloat("_TapeNoiseAlpha", volumeComponent.m_TapeNoiseAlpha.value);
-        mPassMaterial.SetFloat("_InterlacingAmount", volumeComponent.m_InterlacingAmount.value);
-        mPassMaterial.SetFloat("_ScanlineSpeed", volumeComponent.m_ScanlineSpeed.value);
-        mPassMaterial.SetFloat("_ScanlineFrequency", volumeComponent.m_ScanlineFrequency.value);
-        mPassMaterial.SetFloat("_ScanlineIntensity", volumeComponent.m_ScanlineIntensity.value);
+        mPassMaterial.SetFloat(_TapeNoiseAmount, mVolumeComponent.m_TapeNoiseAmount.value);
+        mPassMaterial.SetFloat(_TapeNoiseSpeed, mVolumeComponent.m_TapeNoiseSpeed.value);
+        mPassMaterial.SetFloat(_TapeNoiseAlpha, mVolumeComponent.m_TapeNoiseAlpha.value);
+        mPassMaterial.SetFloat(_InterlacingAmount, mVolumeComponent.m_InterlacingAmount.value);
+        mPassMaterial.SetFloat(_ScanlineSpeed, mVolumeComponent.m_ScanlineSpeed.value);
+        mPassMaterial.SetFloat(_ScanlineFrequency, mVolumeComponent.m_ScanlineFrequency.value);
+        mPassMaterial.SetFloat(_ScanlineIntensity, mVolumeComponent.m_ScanlineIntensity.value);
     }
 
     public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
@@ -147,21 +146,21 @@ public class RetroRenderPass : ScriptableRenderPass
 
     private int PyramidID(int i) => Shader.PropertyToID("_RetroBlurTexture" + i);
     
-    // basic variables
+    // profiling related
+    // -----------------
+    private ProfilingSampler mProfilingSampler;
+    // feature related
     // ---------------
-    private ProfilingSampler    mProfilingSampler;
-    private Retro mVolumeComponent;
-    private Material            mPassMaterial;
+    private Retro    mVolumeComponent;
+    private Material mPassMaterial;
     // render pass related
     // -------------------
     private RTHandle mSourceRT;
-    // constants
-    // ---------
     private int[] mBlurPyramid;
-    
-    private readonly int _SmearTexture0 = Shader.PropertyToID("_SmearTexture0");
-    private readonly int _SmearTexture1 = Shader.PropertyToID("_SmearTexture1");
-    
+    // cached shader property IDs
+    // --------------------------
+    private static readonly int _SmearTexture0 = Shader.PropertyToID("_SmearTexture0");
+    private static readonly int _SmearTexture1 = Shader.PropertyToID("_SmearTexture1");
     private static readonly int _BlurBias = Shader.PropertyToID("_BlurBias");
     private static readonly int _UpsampleFactor = Shader.PropertyToID("_UpsampleFactor");
     private static readonly int _SmearTextureTexelSize = Shader.PropertyToID("_SmearTextureTexelSize");
@@ -172,4 +171,11 @@ public class RetroRenderPass : ScriptableRenderPass
     private static readonly int _SlightBlurredTexture = Shader.PropertyToID("_SlightBlurredTexture");
     private static readonly int _BlurredTexture = Shader.PropertyToID("_BlurredTexture");
     private static readonly int _SmearTexture = Shader.PropertyToID("_SmearTexture");
+    private static readonly int _TapeNoiseAmount = Shader.PropertyToID("_TapeNoiseAmount");
+    private static readonly int _TapeNoiseSpeed = Shader.PropertyToID("_TapeNoiseSpeed");
+    private static readonly int _TapeNoiseAlpha = Shader.PropertyToID("_TapeNoiseAlpha");
+    private static readonly int _InterlacingAmount = Shader.PropertyToID("_InterlacingAmount");
+    private static readonly int _ScanlineSpeed = Shader.PropertyToID("_ScanlineSpeed");
+    private static readonly int _ScanlineFrequency = Shader.PropertyToID("_ScanlineFrequency");
+    private static readonly int _ScanlineIntensity = Shader.PropertyToID("_ScanlineIntensity");
 }
